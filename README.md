@@ -2,6 +2,7 @@
 
 by Bregalad. Special thanks to Kode54.  
 Bug fixes and improvements by KevinM, nyanpasu64 and Optiroc.  
+Ported to D by Herringway.
 
 BRRtools are currently the most evolved tools to convert between standard RIFF .wav format and SNES's built-in BRR sound format.
 They have many features never seen before in any other converter, and are open source.
@@ -13,11 +14,12 @@ I heavily borrowed encoding algorithms from Kode54, which himself heavily borrow
 This is freeware, feel free to redistribute/improve but DON'T CLAIM IT IS YOUR OWN WORK THANK YOU.
 
 ## How to use
-Building the tools requires a C toolchain and make. Cygwin is recommended on Windows, most other operating systems should be good to go. 
+Building the tools requires the D compiler and dub.
 
 BRRtools comes in 3 parts:
 
 ### brr_decoder
+Build with `dub build :brr_decoder`
 brr_decoder decodes a .brr sound sample to a .wav file
 
 	Usage:
@@ -39,6 +41,7 @@ If you specify a loop count value >1 with the `-n` or `-m` commands, brr_decoder
 It will also try to detect which musical note the sample plays (this, of course, depends on the sampling rate).
 
 ### spc_decoder
+Build with `dub build :spc_decoder`
 spc_decoder is similar to brr_decoder, but decodes one or multiple BRR sound samples directly from a .spc file to .wav file(s)
 
 	Usage:
@@ -65,6 +68,7 @@ If you only specify the first sample number, spc_decoder will only decode a sing
 As with brr_decoder, info about sample's looping stability and musical note is written on the screen.
 
 ### brr_encoder
+Build with `dub build :brr_encoder`
 brr_encoder encodes a .wav file to a .brr native SNES sound sample.
 
 	Usage:
@@ -120,19 +124,10 @@ You can choose between several interoplation algorithms. I would really recommen
 ## Troubleshooting
 If you have problem encoding your samples into BRR or that they sound somehow wrong/distorted, try to use `-a0.9` (that is, reduce the amplitude to 90% of the original). Very often, overflow problems happens when resampling a normalized sample (where the entire range is used), and reducing the amplitude slightly make it work greatly.
 
-## Compiling BRRtools
-The makefile provided is a base to compile BRR tools on both windows systems (using mingw32) and on linux systems. Just change the executable name and flags to suit your needs.
-
-The source files makes some assumptions about type's bitsizes, you can change the typedefs in `common.h` if you are somehow compiling this with a system with different size than the typical 32/64 bit x86 PC.
-It's normal there is a few warnings coming there.
-
 ## Plans for future updates
 * Any suggestions are welcome.
 * Could someone make a nice GUI for this program? It would be amazing! And personally I have zero knowledge in GUI programming.
 * Support for the Playstation 1 audio format.
-
-## Contact
-Contact me at jmasur at bluewin dot ch if you want to give ideas about how I can improve BRRtools, or even better, if you improved the program by yourself.
 
 ## History
 * v1.0 (2009.11)
