@@ -20,6 +20,7 @@ BRRtools comes in 3 parts:
 
 ### brr_decoder
 Build with `dub build :brr_decoder`
+
 brr_decoder decodes a .brr sound sample to a .wav file
 
 	Usage:
@@ -42,6 +43,7 @@ It will also try to detect which musical note the sample plays (this, of course,
 
 ### spc_decoder
 Build with `dub build :spc_decoder`
+
 spc_decoder is similar to brr_decoder, but decodes one or multiple BRR sound samples directly from a .spc file to .wav file(s)
 
 	Usage:
@@ -69,6 +71,7 @@ As with brr_decoder, info about sample's looping stability and musical note is w
 
 ### brr_encoder
 Build with `dub build :brr_encoder`
+
 brr_encoder encodes a .wav file to a .brr native SNES sound sample.
 
 	Usage:
