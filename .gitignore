@@ -1,2 +1,7 @@
 .build
 bin
+*.exe
+*.brr
+*.wav
+*.spc
+*.obj
