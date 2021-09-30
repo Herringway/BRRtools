@@ -1,18 +1,19 @@
-#include <stdio.h>
-#include <math.h>
-#include "brr.h"
+import core.stdc.stdio;
+import core.stdc.math;
+import common;
+
 
 // Global variables
-u8 BRR[9];
+u8[9] BRR;
 pcm_t p1, p2;
 
-void print_note_info(const unsigned int loopsize, const unsigned int samplerate)
+void print_note_info(const uint loopsize, const uint samplerate)
 {
-	const char notes[12][3] = {"C ", "C#", "D ", "Eb", "E ", "F ", "F#", "G ", "G#", "A ", "Bb", "B "};
+	static immutable char[3][12] notes = ["C ", "C#", "D ", "Eb", "E ", "F ", "F#", "G ", "G#", "A ", "Bb", "B "];
 
 	if(loopsize < 45)
 	{
-		double frequency = (double)samplerate / (double)(16*loopsize);
+		double frequency = cast(double)samplerate / cast(double)(16*loopsize);
 		double note = 12.0 * log2(frequency / 440.0) - 3.0;
 		int octave = 5;
 		// Makes sure the note is in the [-0.5 .. 11.5[ range
@@ -27,15 +28,15 @@ void print_note_info(const unsigned int loopsize, const unsigned int samplerate)
 			octave += 1;
 		}
 		double inote = round(note);
-		int cents = (int)((note - inote) * 100.0);
+		int cents = cast(int)((note - inote) * 100.0);
 
-		printf(" (probable note : %s%d %+d cents)\n", notes[(int)inote], octave, cents);
+		printf(" (probable note : %s%d %+d cents)\n", notes[cast(int)inote].ptr, octave, cents);
 	}
 	else
 		printf("\n");
 }
 
-void print_loop_info(unsigned int loopcount, pcm_t oldp1[], pcm_t oldp2[])
+void print_loop_info(uint loopcount, pcm_t[] oldp1, pcm_t[] oldp2)
 {
 	if(loopcount > 1)
 	{
@@ -61,14 +62,14 @@ void print_loop_info(unsigned int loopcount, pcm_t oldp1[], pcm_t oldp2[])
 	}
 }
 
-void generate_wave_file(FILE *outwav, unsigned int samplerate, pcm_t *buffer, size_t k)
+void generate_wave_file(FILE *outwav, uint samplerate, pcm_t *buffer, size_t k)
 {
-	struct
+	struct Wave
 	{
-		char chunk_ID[4];				// Should be 'RIFF'
+		char[4] chunk_ID;				// Should be 'RIFF'
 		u32 chunk_size;
-		char wave_str[4];				// Should be 'WAVE'
-		char sc1_id[4];					// Should be 'fmt '
+		char[4] wave_str;				// Should be 'WAVE'
+		char[4] sc1_id;					// Should be 'fmt '
 		u32 sc1size;					// Should be at least 16
 		u16 audio_format;				// Should be 1 for PCM
 		u16 chans;						// 1 for mono, 2 for stereo, etc...
@@ -76,26 +77,26 @@ void generate_wave_file(FILE *outwav, unsigned int samplerate, pcm_t *buffer, si
 		u32 byte_rate;
 		u16 block_align;
 		u16 bits_per_sample;
-		char sc2_id[4];
+		char[4] sc2_id;
 		u32 sc2size;
 	}
-	hdr =
+	Wave hdr =
 	{
-		.chunk_ID = "RIFF",
-		.chunk_size = 32*k + 36,
-		.wave_str = "WAVE",
-		.sc1_id = "fmt ",
-		.sc1size = 16,				//Size of header
-		.audio_format = 1,			//PCM format, no compression
-		.chans = 1,					//Mono
-		.sample_rate = samplerate,	//Sample rate
-		.byte_rate = 2*samplerate,	//Byte rate
-		.block_align = 2,			//BlockAlign
-		.bits_per_sample = 16,		//16-bit samples
-		.sc2_id = "data",
-		.sc2size = 32*k
+		chunk_ID: "RIFF",
+		chunk_size: cast(uint)(32*k + 36),
+		wave_str: "WAVE",
+		sc1_id: "fmt ",
+		sc1size: 16,				//Size of header
+		audio_format: 1,			//PCM format, no compression
+		chans: 1,					//Mono
+		sample_rate: samplerate,	//Sample rate
+		byte_rate: 2*samplerate,	//Byte rate
+		block_align: 2,			//BlockAlign
+		bits_per_sample: 16,		//16-bit samples
+		sc2_id: "data",
+		sc2size: cast(uint)(32*k)
 	};
-	fwrite(&hdr, 1, sizeof(hdr), outwav);	// Write header
+	fwrite(&hdr, 1, hdr.sizeof, outwav);	// Write header
 	fwrite(buffer, 2, 16*k, outwav); 		//write samplebuffer to file
 }
 
@@ -133,7 +134,7 @@ int get_brr_prediction(u8 filter, pcm_t p1, pcm_t p2)
 
 static void decodeSample (char s, u8 shift_am, u8 filter)
 {
-	signed int a;
+	int a;
 	if(shift_am <= 0x0c)			//Valid shift count
 		a = ((s < 8 ? s : s-16) << shift_am) >> 1;
 	else
@@ -147,10 +148,10 @@ static void decodeSample (char s, u8 shift_am, u8 filter)
 	else if(a < -0x4000) a += 0x8000;
 
 	p2 = p1;
-	p1 = a;
+	p1 = cast(short)a;
 }
 
-void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed by arg.
+void decodeBRR(pcm_t *out_) 			//Decode a block of BRR bytes into array pointed by arg.
 {
 	u8 filter = (BRR[0] & 0x0c)>>2;
 	u8 shift_amount = (BRR[0]>>4) & 0x0F;					//Read filter & shift amount
@@ -158,9 +159,9 @@ void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed b
 	for(int i=0; i<8; ++i)  									//Loop for each byte
 	{
 		decodeSample(BRR[i+1]>>4, shift_amount, filter);		//Decode high nybble
-		*(out++) = 2*p1;
+		*(out_++) = cast(short)(2*p1);
 		decodeSample(BRR[i+1]&0x0f, shift_amount, filter);		//Decode low nybble
-		*(out++) = 2*p1;
+		*(out_++) = cast(short)(2*p1);
 	}
 }
 
@@ -171,10 +172,10 @@ void apply_gauss_filter(pcm_t *buffer, size_t length)
 	{
 		int k0 = 372 * (buffer[i-1] + buffer[i+1]);
 		int k = 1304 * buffer[i];
-		buffer[i-1] = prev/2048;
+		buffer[i-1] = cast(short)(prev/2048);
 		prev = k0 + k;
 	}
 	int last = 372 * buffer[length-2] + (1304 + 372) * buffer[length-1];
-	buffer[length-2] = prev/2048;
-	buffer[length-1] = last/2048;
+	buffer[length-2] = cast(short)(prev/2048);
+	buffer[length-1] = cast(short)(last/2048);
 }

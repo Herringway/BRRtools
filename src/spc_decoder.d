@@ -1,31 +1,33 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <getopt.h>
-#include <stdbool.h>
-#include "common.h"
-#include "brr.h"
+import core.stdc.stdio;
+import core.stdc.stdlib;
+import core.stdc.math;
+import core.stdc.string;
+
+import std.algorithm : max;
+import std.getopt;
+import std.string;
+
+import common;
+import brr;
 
 static void print_instructions()
 {
 	printf(
-		"spc_decoder 3.15\n\n"
-		"Usage : spc_decoder [options] infile.spc outfile\n"
-		"Options :\n"
-		"-n number of times to loop through the sample(s) when applicable, default 1\n"
-		"-f first sample # to decode (default : 0)\n"
-		"-l last sample # to decode (default : same as first)\n"
-		"-s output samplerate, default 32000\n"
-		"-m minimum output length in seconds (applies only to looped samples)\n"
-		"-g simulate SNES' gaussian lowpass filtering\n"
+		"spc_decoder 3.15\n\n"~
+		"Usage : spc_decoder [options] infile.spc outfile\n"~
+		"Options :\n"~
+		"-n number of times to loop through the sample(s) when applicable, default 1\n"~
+		"-f first sample # to decode (default : 0)\n"~
+		"-l last sample # to decode (default : same as first)\n"~
+		"-s output samplerate, default 32000\n"~
+		"-m minimum output length in seconds (applies only to looped samples)\n"~
+		"-g simulate SNES' gaussian lowpass filtering\n"~
 		"\nExample : spc_decoder -f3 -l12 -s22050 -m0.8 music.spc music_sample\n"
 	);
 	exit(1);
 }
 
-int main(const int argc, char *const argv[])
+int main(string[] args)
 {
 	int looppos=0, loopcount=1, firstsample=0, lastsample=0, samplerate = 32000, looptimes;
 	double min_length = 0.0;
@@ -34,46 +36,19 @@ int main(const int argc, char *const argv[])
 	u16 sample_adr = 0, loop_adr = 0;
 	pcm_t *samples;
 
-	int c;
-	while ((c = getopt(argc, argv, "n:f:l:s:m:g")) != -1)
-	{
-		int arg = atoi(optarg);
-		switch(c)
-		{
-			case 'n':
-				loopcount = arg;
-				break;
+	getopt(args,
+		"n", &loopcount,
+		"f", &firstsample,
+		"l", &lastsample,
+		"s", &samplerate,
+		"m", &min_length,
+		"g", &gaussian_lowpass,
+	);
 
-			case 'f':
-				firstsample = arg;
-				break;
+	if(args.length != 3) print_instructions();
 
-			case 'l':
-				lastsample = arg;
-				break;
-
-			case 's':
-				samplerate = arg;
-				break;
-
-			case 'm':
-				min_length = atof(optarg);
-				break;
-
-			case 'g':
-				gaussian_lowpass = true;
-				break;
-
-			default:
-				printf("Invalid command line syntax !\n");
-				print_instructions();
-		}
-	}
-
-	if(argc - optind != 2) print_instructions();
-
-	char *inspc_path = argv[optind];
-	char *outwav_path = argv[optind+1];
+	const(char) *inspc_path = args[1].toStringz;
+	const(char) *outwav_path = args[2].toStringz;
 	// Try to open input BRR file
 	FILE *inspc = fopen(inspc_path, "rb");
 	if(!inspc)
@@ -84,12 +59,12 @@ int main(const int argc, char *const argv[])
 
 	// Array to store the name of the opened output WAV file
 	size_t outwav_name_len = strlen(outwav_path) + 9;
-	char *outwav_name = safe_malloc(outwav_name_len);
+	char *outwav_name = cast(char*)safe_malloc(outwav_name_len);
 
 	fseek(inspc, 0x1015d, SEEK_SET);								//Sample location value in DSP
-	unsigned int sample_loc = (fgetc(inspc)<<8)+0x100;				//Location of sample table in file
+	uint sample_loc = (fgetc(inspc)<<8)+0x100;				//Location of sample table in file
 
-	unsigned int sample = firstsample;
+	uint sample = firstsample;
 	do
 	{
 		// Create output file name
@@ -128,23 +103,23 @@ int main(const int argc, char *const argv[])
 			printf("\n* Sample #%d Length : %d Loop : %d.", sample, blockamount, looppos);
 
 			//Implement the "minimum length" function
-			int min_len_samples = (int)ceil(min_length*samplerate/16.0);
-			looptimes = MAX(loopcount, (signed)(min_len_samples-looppos)/(blockamount-looppos));
+			int min_len_samples = cast(int)ceil(min_length*samplerate/16.0);
+			looptimes = max(loopcount, cast(int)(min_len_samples-looppos)/(blockamount-looppos));
 
 			//Tables to remember value of p1, p2 when looping
-			pcm_t olds0[looptimes];
-			pcm_t olds1[looptimes];
+			pcm_t[] olds0 = new pcm_t[](looptimes);
+			pcm_t[] olds1 = new pcm_t[](looptimes);
 
 			//Create samples buffer
-			unsigned int out_blocks = looptimes*(blockamount-looppos)+looppos;
-			samples = safe_malloc(out_blocks * 32);
+			uint out_blocks = looptimes*(blockamount-looppos)+looppos;
+			samples = cast(short*)safe_malloc(out_blocks * 32);
 			pcm_t *buf_ptr = samples;
 
 			//Read the start of the sample before loop point
 			fseek(inspc, sample_adr + 0x100, SEEK_SET);
 			for(int i=0; i<looppos; ++i)
 			{
-				fread(BRR, 1, 9, inspc);			//Read a BRR block
+				fread(BRR.ptr, 1, 9, inspc);			//Read a BRR block
 				decodeBRR(buf_ptr);					//Append 16 BRR samples to existing array
 				buf_ptr += 16;
 			}
@@ -154,7 +129,7 @@ int main(const int argc, char *const argv[])
 				fseek(inspc, sample_adr + 9*looppos + 0x100, SEEK_SET);
 				for(int i=looppos; i<blockamount; ++i)
 				{
-					fread(BRR, 1, 9, inspc);
+					fread(BRR.ptr, 1, 9, inspc);
 					decodeBRR(buf_ptr);
 					if(i == looppos)
 					{
@@ -175,13 +150,13 @@ int main(const int argc, char *const argv[])
 		{
 			printf("\n* Sample #%d Lenght : %d Loop : disabled\n", sample, blockamount);
 
-			samples = safe_malloc(blockamount * 32);
+			samples = cast(short*)safe_malloc(blockamount * 32);
 			pcm_t *buf_ptr = samples;
 
 			fseek(inspc, sample_adr + 0x100, SEEK_SET);
 			for(int k=0; k<blockamount; k++)
 			{
-				fread(BRR, 1, 9, inspc);
+				fread(BRR.ptr, 1, 9, inspc);
 				decodeBRR(buf_ptr);
 				buf_ptr += 16;				//Append 16 BRR samples to existing array
 			}

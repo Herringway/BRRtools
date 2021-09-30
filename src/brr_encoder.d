@@ -1,52 +1,54 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include "common.h"
-#include "brr.h"
+import core.stdc.stdio;
+import core.stdc.stdlib;
+import core.stdc.string;
+import core.stdc.math;
+
+import std.conv;
+import std.getopt;
+import std.string;
+
+import common;
+import brr;
 
 static void print_instructions()
 {
 	printf(
-		"brr_encoder 3.15\n\n"
-		"Usage : brr_encoder [options] infile.wav outfile.brr\n"
-		"Options :\n"
-		"-a[ampl] adjust wave amplitude by a factor ampl (default : 1.0)\n"
-		"-l(pos) enable looping flag in the encoded BRR sample (default : disabled)\n"
-		"   If a number follows the -l flag, this is the input's loop point in samples.\n"
-		"   The output will be resampled in a way so the looped part of the sample is\n"
-		"   an integer # of BRR blocks.\n"
-		"-f[0123] manually enable filters for BRR blocks (default : all enabled)\n"
-		"-r[type][ratio] resample input stream, followed by resample ratio (> 0.0)\n"
-		"  (lower means more samples at output, better quality but increased size,\n"
-		"  higher means less smaples, worse quality but decreased size).\n"
-		"-s[type][rate] automatically resample to get the specified samplerate\n"
-		"-t[N] truncate the input wave to the the first N samples (ignoring\n"
-		"  any sound data that follows)\n"
-		"-w disable wrapping (encoded sample will be compatible with old SPC players)\n"
-		"-m add Addmusic header to the samples (to be usable with SMW Addmusic tools)\n"
-		"-g enable treble boost to compensate the gaussian filtering of SNES hardware\n"
-		"\nResampling interpolation types :\n"
-		"n : nearest neighboor, l : linear, s : sine, c : cubic, b : bandlimited\n\n"
-		"Examples : brr_encoder -l432 -a0.8 -f01 -sc32000 in_sample.wav out_sample.brr\n"
-		"           brr_encoder -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr\n"
+		"brr_encoder 3.15\n\n"~
+		"Usage : brr_encoder [options] infile.wav outfile.brr\n"~
+		"Options :\n"~
+		"-a ampl adjust wave amplitude by a factor ampl (default : 1.0)\n"~
+		"-l pos enable looping flag in the encoded BRR sample (default : disabled)\n"~
+		"   If a number follows the -l flag, this is the input's loop point in samples.\n"~
+		"   The output will be resampled in a way so the looped part of the sample is\n"~
+		"   an integer # of BRR blocks.\n"~
+		"-f 0123 manually enable filters for BRR blocks (default : all enabled)\n"~
+		"-r \"type ratio\" resample input stream, followed by resample ratio (> 0.0)\n"~
+		"  (lower means more samples at output, better quality but increased size,\n"~
+		"  higher means less smaples, worse quality but decreased size).\n"~
+		"-s \"type rate\" automatically resample to get the specified samplerate\n"~
+		"-t N truncate the input wave to the the first N samples (ignoring\n"~
+		"  any sound data that follows)\n"~
+		"-w disable wrapping (encoded sample will be compatible with old SPC players)\n"~
+		"-m add Addmusic header to the samples (to be usable with SMW Addmusic tools)\n"~
+		"-g enable treble boost to compensate the gaussian filtering of SNES hardware\n"~
+		"\nResampling interpolation types :\n"~
+		"n : nearest neighboor, l : linear, s : sine, c : cubic, b : bandlimited\n\n"~
+		"Examples : brr_encoder -l 432 -a 0.8 -f 01 -s \"c 32000\" in_sample.wav out_sample.brr\n"~
+		"           brr_encoder -l -f 23 -r \"b 0.84\" -t 19 in_sample.wav out_sample.brr\n"
 	);
 	exit(1);
 }
 
-typedef signed int Sample;		// -rb and -g causes signed shorts to overflow and wrap around.
-#define WIDTH sizeof(Sample)
+alias Sample = int ;		// -rb and -g causes signed shorts to overflow and wrap around.
+enum WIDTH = Sample.sizeof;
 
-static u8 filter_at_loop = 0;
-static Sample p1_at_loop, p2_at_loop;
-static bool FIRen[4] = {true, true, true, true};	// Which BRR filters are enabled
-static unsigned int FIRstats[4] = {0, 0, 0, 0};	// Statistincs on BRR filter usage
-static bool wrap_en = true;
-static char resample_type = 'l';					// Resampling type (n = nearest neighboor, l = linear, c = cubic, s = sine, b = bandlimited)
-static bool add_header = false;
+u8 filter_at_loop = 0;
+Sample p1_at_loop, p2_at_loop;
+bool[4] FIRen = [true, true, true, true];	// Which BRR filters are enabled
+uint[4] FIRstats = [0, 0, 0, 0];	// Statistincs on BRR filter usage
+bool wrap_en = true;
+char resample_type = 'l';					// Resampling type (n = nearest neighboor, l = linear, c = cubic, s = sine, b = bandlimited)
+bool add_header = false;
 
 static double sinc(const double x)
 {
@@ -60,9 +62,9 @@ static double sinc(const double x)
 // Returns the squared error between original data and encoded data
 // If "is_end_point" is true, the predictions p1/p2 at loop are also used in caluclating the error (depending on filter at loop)
 
-#define CLAMP_16(n) ( ((signed short)(n) != (n)) ? ((signed short)(0x7fff - ((n)>>24))) : (n) )
+auto CLAMP_16(T)(T n) { return ( (cast(short)(n) != (n)) ? (cast(short)(0x7fff - ((n)>>24))) : (n) ); }
 
-static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_data[16], bool write, bool is_end_point)
+static double ADPCMMash(uint shiftamount, u8 filter, const Sample*/+[16]+/ PCM_data, bool write, bool is_end_point)
 {
 	double d2=0.0;
 	Sample l1 = p1;
@@ -75,7 +77,7 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 	{
 		/* make linear prediction for next sample */
 		/*      vlin = (v0 * iCoef[0] + v1 * iCoef[1]) >> 8; */
-		vlin = get_brr_prediction(filter, l1, l2) >> 1;
+		vlin = get_brr_prediction(filter, cast(short)l1, cast(short)l2) >> 1;
 		d = ( PCM_data[i] >> 1 ) - vlin;		/* difference between linear prediction and current sample */
 		da = abs( d );
 		if ( wrap_en && da > 16384 && da < 32768 )
@@ -103,13 +105,13 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		c &= 0x0f;		/* mask to 4 bits */
 
 		l2 = l1;			/* shift history */
-		l1 = (Sample) ( CLAMP_16( vlin + dp ) * 2 );
+		l1 = cast(Sample) ( CLAMP_16( vlin + dp ) * 2 );
 
 		d = PCM_data[i] - l1;
-		d2 += (double)d * d;		/* update square-error */
+		d2 += cast(double)d * d;		/* update square-error */
 
 		if (write)					/* if we want output, put it in proper place */
-			(BRR+1)[i >> 1] |= (i&1) ? c : c<<4;
+			(BRR.ptr+1)[i >> 1] |= (i&1) ? c : c<<4;
 	}
 
 	if (is_end_point)
@@ -122,16 +124,16 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 			/* Filter 1 */
 			case 1:
 			d = l1 - p1_at_loop;
-			d2 += (double)d * d;
+			d2 += cast(double)d * d;
 			d2 /= 17.;
 			break;
 
 			/* Filters 2 & 3 */
 			default:
 			d = l1 - p1_at_loop;
-			d2 += (double)d * d;
+			d2 += cast(double)d * d;
 			d = l2 - p2_at_loop;
-			d2 += (double)d * d;
+			d2 += cast(double)d * d;
 			d2 /= 18.;
 		}
 	else
@@ -139,18 +141,19 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 
 	if (write)
     {	/* when generating real output, we want to return these */
-		p1 = l1;
-		p2 = l2;
+		p1 = cast(short)l1;
+		p2 = cast(short)l2;
 
-		BRR[0] = (shiftamount<<4)|(filter<<2);
+		BRR[0] = cast(ubyte)((shiftamount<<4)|(filter<<2));
 		if(is_end_point)
 				BRR[0] |= 1;						//Set the end bit if we're on the last block
     }
 	return d2;
 }
 
+enum FIR_ORDER = (15);
 // Encode a ADPCM block using brute force over filters and shift amounts
-static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool is_end_point)
+static void ADPCMBlockMash(const Sample*/+[16]+/ PCM_data, bool is_loop_point, bool is_end_point)
 {
 	int smin, kmin;
 	double dmin = INFINITY;
@@ -158,7 +161,7 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 		for(int k=0; k<4; ++k)
 			if(FIRen[k])
 			{
-				double d = ADPCMMash(s, k, PCM_data, false, is_end_point);
+				double d = ADPCMMash(s, cast(ubyte)k, PCM_data, false, is_end_point);
 				if (d < dmin)
 				{
 					kmin = k;		//Memorize the filter, shift values with smaller error
@@ -169,18 +172,18 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 
 	if(is_loop_point)
 	{
-		filter_at_loop = kmin;
+		filter_at_loop = cast(ubyte)kmin;
 		p1_at_loop = p1;
 		p2_at_loop = p2;
 	}
-	ADPCMMash(smin, kmin, PCM_data, true, is_end_point);
+	ADPCMMash(smin, cast(ubyte)kmin, PCM_data, true, is_end_point);
 	FIRstats[kmin]++;
 }
 
 static Sample *resample(Sample *samples, size_t samples_length, size_t out_length, char type)
 {
-	double ratio = (double)samples_length / (double)out_length;
-	Sample *out = safe_malloc(WIDTH * out_length);
+	double ratio = cast(double)samples_length / cast(double)out_length;
+	Sample *out_ = cast(Sample*)safe_malloc(WIDTH * out_length);
 
 	printf("Resampling by effective ratio of %f...\n", ratio);
 
@@ -188,40 +191,40 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 	case 'n':								//No interpolation
 		for(int i=0; i<out_length; ++i)
 		{
-			out[i] = samples[(int)floor(i*ratio)];
+			out_[i] = samples[cast(int)floor(i*ratio)];
 		}
 		break;
 	case 'l':								//Linear interpolation
 		for(int i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);		//Whole part of index
+			int a = cast(int)(i*ratio);		//Whole part of index
 			double b = i*ratio-a;		//Fractional part of index
 			if((a+1)==samples_length)
-				out[i] = samples[a];	//This used only for the last sample
+				out_[i] = samples[a];	//This used only for the last sample
 			else
-				out[i] = (1-b)*samples[a]+b*samples[a+1];
+				out_[i] = cast(int)((1-b)*samples[a]+b*samples[a+1]);
 		}
 		break;
 	case 's':								//Sine interpolation
 		for(int i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);
+			int a = cast(int)(i*ratio);
 			double b = i*ratio-a;
 			double c = (1.0-cos(b*PI))/2.0;
 			if((a+1)==samples_length)
-				out[i] = samples[a];	//This used only for the last sample
-			else out[i] = (1-c)*samples[a]+c*samples[a+1];
+				out_[i] = samples[a];	//This used only for the last sample
+			else out_[i] = cast(int)((1-c)*samples[a]+c*samples[a+1]);
 		}
 		break;
 	case 'c':										//Cubic interpolation
 		for(int i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);
+			int a = cast(int)(i*ratio);
 
-			short s0 = (a == 0) ? samples[0] : samples[a-1];
-			short s1 = samples[a];
-			short s2 = (a+1 >= samples_length) ? samples[samples_length-1] : samples[a+1];
-			short s3 = (a+2 >= samples_length) ? samples[samples_length-1] : samples[a+2];
+			short s0 = cast(short)((a == 0) ? samples[0] : samples[a-1]);
+			short s1 = cast(short)(samples[a]);
+			short s2 = cast(short)((a+1 >= samples_length) ? samples[samples_length-1] : samples[a+1]);
+			short s3 = cast(short)((a+2 >= samples_length) ? samples[samples_length-1] : samples[a+2]);
 
 			double a0 = s3-s2-s0+s1;
 			double a1 = s0-s1-a0;
@@ -229,7 +232,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 			double b = i*ratio-a;
 			double b2 = b*b;
 			double b3 = b2*b;
-			out[i] = b3*a0 + b2*a1 + b*a2 + s1;
+			out_[i] = cast(int)(b3*a0 + b2*a1 + b*a2 + s1);
 		}
 		break;
 
@@ -237,10 +240,9 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 		// Antialisaing pre-filtering
 		if(ratio > 1.0)
 		{
-			Sample *samples_antialiased = safe_malloc(WIDTH * samples_length);
+			Sample *samples_antialiased = cast(Sample*)safe_malloc(WIDTH * samples_length);
 
-			#define FIR_ORDER (15)
-			double fir_coefs[FIR_ORDER+1];
+			double[FIR_ORDER+1] fir_coefs;
 			// Compute FIR coefficients
 			for(int k=0; k<=FIR_ORDER; ++k)
 				fir_coefs[k] = sinc(k/ratio)/ratio;
@@ -254,7 +256,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 					acc += fir_coefs[k] * ((i+k < samples_length) ? samples[i+k] : samples[samples_length-1]);
 					acc += fir_coefs[k] * ((i-k >= 0) ? samples[i-k] : samples[0]);
 				}
-				samples_antialiased[i] = (Sample)acc;
+				samples_antialiased[i] = cast(Sample)acc;
 			}
 
 			free(samples);
@@ -265,7 +267,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 		{
 			double a = i*ratio;
 			double acc = 0.0;
-			for(int j=(int)a-FIR_ORDER; j<=(int)a+FIR_ORDER; ++j)
+			for(int j=cast(int)a-FIR_ORDER; j<=cast(int)a+FIR_ORDER; ++j)
 			{
 				Sample sample;
 				if(j >=0)
@@ -278,7 +280,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 
 				acc += sample*sinc(a-j);
 			}
-			out[i] = (Sample)acc;
+			out_[i] = cast(Sample)acc;
 		}
 		break;
 
@@ -288,15 +290,15 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 	}
 	// No longer need the non-resampled version of the sample
 	free(samples);
-	return out;
+	return out_;
 }
 
 // This function applies a treble boosting filter that compensates the gauss lowpass filter
 static Sample *treble_boost_filter(Sample *samples, size_t length)
 {	// Tepples' coefficient multiplied by 0.6 to avoid overflow in most cases
-	const double coefs[8] = {0.912962, -0.16199, -0.0153283, 0.0426783, -0.0372004, 0.023436, -0.0105816, 0.00250474};
+	static immutable double[8] coefs = [0.912962, -0.16199, -0.0153283, 0.0426783, -0.0372004, 0.023436, -0.0105816, 0.00250474];
 
-	Sample *out = safe_malloc(length * WIDTH);
+	Sample *out_ = cast(Sample*)safe_malloc(length * WIDTH);
 	for(int i=0; i<length; ++i)
 	{
 		double acc = samples[i] * coefs[0];
@@ -305,106 +307,89 @@ static Sample *treble_boost_filter(Sample *samples, size_t length)
 			acc += coefs[k] * ((i+k < length) ? samples[i+k] : samples[length-1]);
 			acc += coefs[k] * ((i-k >= 0) ? samples[i-k] : samples[0]);
 		}
-		out[i] = acc;
+		out_[i] = cast(int)acc;
 	}
 	free(samples);
-	return out;
+	return out_;
 }
 
-int main(const int argc, char *const argv[])
+int main(string[] args)
 {
 	double ampl_adjust = 1.0;				// Adjusting amplitude
     double ratio = 1.0;						// Resampling factor (range ]0..4])
     char loop_flag = 0;						// = 0x02 if loop flag is active
-    unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
+    uint target_samplerate = 0;		// Output sample rate (0 = don't change)
     bool fix_loop_en = false;				// True if fixed loop is activated
-	signed int loop_start;				// Starting point of loop
-	unsigned int truncate_len = 0;			// Point at which input wave will be truncated (if = 0, input wave is not truncated)
+	int loop_start;				// Starting point of loop
+	uint truncate_len = 0;			// Point at which input wave will be truncated (if = 0, input wave is not truncated)
 	bool treble_boost = false;
 
-	int c;
-	while((c = getopt(argc, argv, "a:l::f:wr:s:z:r:t:gm")) != -1)
-	{
-		switch(c)
+	//int c;
+	void setFIRen(string, string value) {
+		FIRen[0] = false;
+		FIRen[1] = false;
+		FIRen[2] = false;
+		FIRen[3] = false;
+		for(int i=0; i < value.length; ++i)
 		{
-			case 'a':
-				ampl_adjust = atof(optarg);
-				break;
-
-			// Only specified filters are enabled
-			case 'f':
-				FIRen[0] = false;
-				FIRen[1] = false;
-				FIRen[2] = false;
-				FIRen[3] = false;
-				for(int i=0; i < strlen(optarg); ++i)
-				{
-					switch(optarg[i])
-					{
-						case '0' :
-							FIRen[0] = true;
-							break;
-						case '1' :
-							FIRen[1] = true;
-							break;
-						case '2' :
-							FIRen[2] = true;
-							break;
-						case '3' :
-							FIRen[3] = true;
-							break;
-						default:
-							print_instructions();
-					}
-				}
-				break;
-
-			case 'w':
-				wrap_en = false;
-				break;
-
-			case 'r':
-				resample_type = optarg[0];
-				ratio = atof(optarg+1);
-				if(ratio <= 0.0)
+			switch(value[i])
+			{
+				case '0' :
+					FIRen[0] = true;
+					break;
+				case '1' :
+					FIRen[1] = true;
+					break;
+				case '2' :
+					FIRen[2] = true;
+					break;
+				case '3' :
+					FIRen[3] = true;
+					break;
+				default:
 					print_instructions();
-				break;
-
-			case 's':
-				resample_type = optarg[0];
-				target_samplerate = atoi(optarg+1);
-				break;
-
-			case 'l':
-				loop_flag = 0x02;
-				if(optarg)			// The argument to -l is facultative
-				{
-					loop_start = atoi(optarg);
-					fix_loop_en = true;
-				}
-				break;
-
-			case 't':
-				truncate_len = atoi(optarg);
-				break;
-
-			case 'g':
-				treble_boost = true;
-				break;
-
-			case 'm':
-				add_header = true;
-				break;
-
-			default :
-				printf("Invalid command line syntax !\n");
-				print_instructions();
+					break;
+			}
 		}
 	}
+	void setResample(string type, string value) {
+		resample_type = value[0];
+		switch (type) {
+			case "r":
+				ratio = value.split(" ")[1].to!float;
+				if (ratio <= 0.0) {
+					print_instructions();
+				}
+				break;
+			case "s":
+				target_samplerate = value.split(" ")[1].to!uint;
+				break;
+			default: break;
+		}
+	}
+	void setLoop(string, string value) {
+		loop_flag = 2;
+		if (value != "") {
+			loop_start = value.to!uint;
+			fix_loop_en = true;
+		}
+	}
+	arraySep = ",";
+	getopt(args,
+		"a", &ampl_adjust,
+		"f", &setFIRen,
+		"w", &wrap_en,
+		"r", &setResample,
+		"s", &setResample,
+		"l", &setLoop,
+		"t", &truncate_len,
+		"g", &treble_boost,
+		"m", &add_header,
+	);
 
-	if(argc - optind != 2) print_instructions();
-	char *inwav_path = argv[optind];			// Path of input and output files
-	char *outbrr_path = argv[optind+1];
+	if(args.length != 3) print_instructions();
+	const(char) *inwav_path = args[1].toStringz;			// Path of input and output files
+	const(char) *outbrr_path = args[2].toStringz;
 
 	FILE *inwav = fopen(inwav_path, "rb");
 	if(!inwav)
@@ -413,12 +398,12 @@ int main(const int argc, char *const argv[])
 		exit(1);
 	}
 
-	struct
+	struct Wave
 	{
-		char chunk_ID[4];				// Should be 'RIFF'
+		char[4] chunk_ID;				// Should be 'RIFF'
 		u32 chunk_size;
-		char wave_str[4];				// Should be 'WAVE'
-		char sc1_id[4];					// Should be 'fmt '
+		char[4] wave_str;				// Should be 'WAVE'
+		char[4] sc1_id;					// Should be 'fmt '
 		u32 sc1size;					// Should be at least 16
 		u16 audio_format;				// Should be 1 for PCM
 		u16 chans;						// 1 for mono, 2 for stereo, etc...
@@ -427,25 +412,25 @@ int main(const int argc, char *const argv[])
 		u16 block_align;
 		u16 bits_per_sample;
 	}
-	hdr;
+	Wave hdr;
 
 	// Read header
-	int err = fread(&hdr, 1, sizeof(hdr), inwav);
+	int err = cast(int)fread(&hdr, 1, hdr.sizeof, inwav);
 	// If they couldn't read the file (for example if it's too small)
-	if(err != sizeof(hdr))
+	if(err != hdr.sizeof)
 	{
 		fprintf(stderr, "Error : Input file in incompatible format %d\n", err);
 		exit(1);
 	}
 
 	// Read "RIFF" word
-	if(strncmp(hdr.chunk_ID, "RIFF", 4))
+	if(strncmp(hdr.chunk_ID.ptr, "RIFF", 4))
 	{
 		fprintf(stderr, "Error : Input file in unsupported format : \"RIFF\" block missing.\n");
 		exit(1);
 	}
 	// "WAVEfmt" letters
-	if(strncmp(hdr.wave_str, "WAVEfmt ", 8))
+	if(strncmp(hdr.wave_str.ptr, "WAVEfmt ", 8))
 	{
 		fprintf(stderr, "Input file in unsupported format : \"WAVEfmt\" block missing !\n");
 		exit(1);
@@ -477,60 +462,60 @@ int main(const int argc, char *const argv[])
 	}
 	fseek(inwav, hdr.sc1size-0x10, SEEK_CUR);			// nSkip possible longer header
 
-	struct
+	struct SHdr
 	{
-		char name[4];
+		char[4] name;
 		u32 size;
 	}
-	sub_hdr;
+	SHdr sub_hdr;
 	while(true)
 	{
-		err = fread(&sub_hdr, 1, sizeof(sub_hdr), inwav);
-		if(err != sizeof(sub_hdr))
+		err = cast(int)fread(&sub_hdr, 1, sub_hdr.sizeof, inwav);
+		if(err != sub_hdr.sizeof)
 		{
 			fprintf(stderr, "End of file reached without finding a \"data\" chunk.\n");
 			exit(1);
 		}
-		if(strncmp(sub_hdr.name, "data", 4))			// If there is anyother non-"data" block, skip it
+		if(strncmp(sub_hdr.name.ptr, "data", 4))			// If there is anyother non-"data" block, skip it
 			fseek(inwav, sub_hdr.size, SEEK_CUR);
 		else
 			break;
 	}
 
 	// Output buffer
-	unsigned int samples_length = sub_hdr.size/hdr.block_align;
+	uint samples_length = sub_hdr.size/hdr.block_align;
 	// Optional truncation of input sample
 	if(truncate_len && (truncate_len < samples_length))
 		samples_length = truncate_len;
 
-	Sample *samples = safe_malloc(WIDTH * samples_length);
+	Sample *samples = cast(Sample*)safe_malloc(WIDTH * samples_length);
 
 	// Adjust amplitude in function of amount of channels
 	ampl_adjust /= hdr.chans;
+	int sample;
 	switch (hdr.bits_per_sample)
 	{
-		signed int sample;
 		case 8 :
 			for(int i=0; i < samples_length; ++i)
 			{
-				unsigned char in8_chns[hdr.chans];
-				fread(in8_chns, 1, hdr.chans, inwav);	// Read single sample on CHANS channels at a time
+				ubyte[] in8_chns = new ubyte[](hdr.chans);
+				fread(in8_chns.ptr, 1, hdr.chans, inwav);	// Read single sample on CHANS channels at a time
 				sample = 0;
 				for(int ch=0; ch < hdr.chans; ++ch)		// Average samples of all channels
 					sample += in8_chns[ch]-0x80;
-				samples[i] = (Sample)((sample<<8) * ampl_adjust);
+				samples[i] = cast(Sample)((sample<<8) * ampl_adjust);
 			}
 			break;
 
 		case 16 :
 			for(int i=0; i < samples_length; ++i)
 			{
-				signed short in16_chns[hdr.chans];
-				fread(in16_chns, 2, hdr.chans, inwav);
+				short[] in16_chns = new short[](hdr.chans);
+				fread(in16_chns.ptr, 2, hdr.chans, inwav);
 				sample = 0;
 				for(int ch=0; ch < hdr.chans; ++ch)
 					sample += in16_chns[ch];
-				samples[i] = (Sample)(sample * ampl_adjust);
+				samples[i] = cast(Sample)(sample * ampl_adjust);
 			}
 			break;
 
@@ -545,11 +530,11 @@ int main(const int argc, char *const argv[])
 		ratio = 1.0 * hdr.sample_rate / target_samplerate;
 	}
 
-	unsigned int target_length;
-	unsigned int new_loopsize;
+	uint target_length;
+	uint new_loopsize;
 
 	if (!fix_loop_en)
-		target_length = round(samples_length/ratio);
+		target_length = cast(uint)round(samples_length/ratio);
 	else {
 		if (loop_start < 0) {
 			loop_start += samples_length;
@@ -557,9 +542,9 @@ int main(const int argc, char *const argv[])
 
 		double loopsize = (samples_length - loop_start) / ratio;
 		// New loopsize is the multiple of 16 that comes after loopsize
-		new_loopsize = ceil(loopsize/16)*16;
+		new_loopsize = cast(uint)ceil(loopsize/16)*16;
 		// Adjust resampling
-		target_length = round(samples_length/ratio * new_loopsize / loopsize);
+		target_length = cast(uint)round(samples_length/ratio * new_loopsize / loopsize);
 	}
 
 	samples = resample(samples, samples_length, target_length, resample_type);
@@ -572,12 +557,12 @@ int main(const int argc, char *const argv[])
 	{
 		int padding = 16 - (samples_length % 16);
 		printf(
-			"The Amount of PCM samples isn't a multiple of 16 !\n"
+			"The Amount of PCM samples isn't a multiple of 16 !\n"~
 			"The sample will be padded with %d zeroes at the beginning.\n"
 		, padding);
 
 		// Increase buffer size and add zeroes at beginning
-		samples = realloc(samples, WIDTH*(samples_length + padding));
+		samples = cast(int*)realloc(samples, WIDTH*(samples_length + padding));
 		if(!samples)
 		{
 			fprintf(stderr, "Error : Can't allocate memory.\n");
@@ -603,23 +588,23 @@ int main(const int argc, char *const argv[])
 	for (int i=0; i<16; ++i)					//Initialization needed if any of the first 16 samples isn't zero
 		initial_block |= samples[i]!=0;
 
-	unsigned int k = 0;
+	uint k = 0;
 	if(fix_loop_en) {
 		k = samples_length - (initial_block ? new_loopsize - 16 : new_loopsize);
 	}
 
 	if(add_header) {
-		unsigned int k1 = k * 9 / 16;
-		unsigned int k_low = k1&0xFF;
-		unsigned int k_high = (k1>>8)&0xFF;
+		uint k1 = k * 9 / 16;
+		uint k_low = k1&0xFF;
+		uint k_high = (k1>>8)&0xFF;
 		fwrite(&k_low, 1, 1, outbrr);
 		fwrite(&k_high, 1, 1, outbrr);
 	}
 
 	if(initial_block)
 	{	//Write initial BRR block
-		const u8 initial_block[9] = {loop_flag, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-		fwrite(initial_block, 1, 9, outbrr);
+		const u8[9] initial_block_ = [loop_flag, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+		fwrite(initial_block_.ptr, 1, 9, outbrr);
 		printf("Initial BRR block added.\n");
 	}
 	p1 = 0;
@@ -627,12 +612,12 @@ int main(const int argc, char *const argv[])
 	for (int n=0; n<samples_length; n+=16)
 	{
 		//Clear BRR buffer
-		memset(BRR, 0, 9);
+		memset(BRR.ptr, 0, 9);
 		//Encode BRR block, tell the encoder if we're at loop point (if loop is enabled), and if we're at end point
 		ADPCMBlockMash(samples + n, fix_loop_en && (n == (samples_length - new_loopsize)), n == samples_length - 16);
 		//Set the loop flag if needed
 		BRR[0] |= loop_flag;
-		fwrite(BRR, 9, 1, outbrr);
+		fwrite(BRR.ptr, 9, 1, outbrr);
 	}
 	puts("Done !");
 
