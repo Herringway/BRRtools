@@ -16,25 +16,25 @@ static void print_instructions()
 		"brr_encoder 3.15\n\n"~
 		"Usage : brr_encoder [options] infile.wav outfile.brr\n"~
 		"Options :\n"~
-		"-a ampl adjust wave amplitude by a factor ampl (default : 1.0)\n"~
-		"-l pos enable looping flag in the encoded BRR sample (default : disabled)\n"~
+		"-a [ampl] adjust wave amplitude by a factor ampl (default : 1.0)\n"~
+		"-l [pos] enable looping flag in the encoded BRR sample (default : disabled)\n"~
 		"   If a number follows the -l flag, this is the input's loop point in samples.\n"~
 		"   The output will be resampled in a way so the looped part of the sample is\n"~
 		"   an integer # of BRR blocks.\n"~
-		"-f 0123 manually enable filters for BRR blocks (default : all enabled)\n"~
-		"-r \"type ratio\" resample input stream, followed by resample ratio (> 0.0)\n"~
+		"-f [0123] manually enable filters for BRR blocks (default : all enabled)\n"~
+		"-r [type][ratio] resample input stream, followed by resample ratio (> 0.0)\n"~
 		"  (lower means more samples at output, better quality but increased size,\n"~
 		"  higher means less smaples, worse quality but decreased size).\n"~
-		"-s \"type rate\" automatically resample to get the specified samplerate\n"~
-		"-t N truncate the input wave to the the first N samples (ignoring\n"~
+		"-s [type][rate] automatically resample to get the specified samplerate\n"~
+		"-t [N] truncate the input wave to the the first N samples (ignoring\n"~
 		"  any sound data that follows)\n"~
 		"-w disable wrapping (encoded sample will be compatible with old SPC players)\n"~
 		"-m add Addmusic header to the samples (to be usable with SMW Addmusic tools)\n"~
 		"-g enable treble boost to compensate the gaussian filtering of SNES hardware\n"~
 		"\nResampling interpolation types :\n"~
 		"n : nearest neighboor, l : linear, s : sine, c : cubic, b : bandlimited\n\n"~
-		"Examples : brr_encoder -l 432 -a 0.8 -f 01 -s \"c 32000\" in_sample.wav out_sample.brr\n"~
-		"           brr_encoder -l -f 23 -r \"b 0.84\" -t 19 in_sample.wav out_sample.brr\n"
+		"Examples : brr_encoder -l 432 -a 0.8 -f 01 -s c32000 in_sample.wav out_sample.brr\n"~
+		"           brr_encoder -l -f 23 -r b0.84 -t 19 in_sample.wav out_sample.brr\n"
 	);
 	exit(1);
 }
@@ -356,13 +356,13 @@ int main(string[] args)
 		resample_type = value[0];
 		switch (type) {
 			case "r":
-				ratio = value.split(" ")[1].to!float;
+				ratio = value[1 .. $].to!float;
 				if (ratio <= 0.0) {
 					print_instructions();
 				}
 				break;
 			case "s":
-				target_samplerate = value.split(" ")[1].to!uint;
+				target_samplerate = value[1 .. $].to!uint;
 				break;
 			default: break;
 		}

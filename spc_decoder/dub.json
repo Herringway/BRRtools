@@ -1,0 +1,10 @@
+{
+	"name": "spc_decoder",
+	"authors": [],
+	"description": "Tool for decoding BRR samples from SPC files.",
+	"copyright": "",
+	"license": "proprietary",
+	"dependencies":  {
+		"brrtools": "*"
+	}
+}

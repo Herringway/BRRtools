@@ -5,3 +5,6 @@ bin
 *.wav
 *.spc
 *.obj
+.dub
+*.lib
+*.o

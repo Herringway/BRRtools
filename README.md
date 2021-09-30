@@ -31,7 +31,7 @@ brr_decoder decodes a .brr sound sample to a .wav file
 	-g simulate SNES' gaussian lowpass filtering
 
 	Example:
-	brr_decoder -n19 -l128 -s16000 some_sample.brr some_sample.wav
+	brr_decoder -n 19 -l 128 -s 16000 some_sample.brr some_sample.wav
 
 The minimum length functionality forces a looped sample to loop so that its length is at least the specified number in seconds. If both -m and -n are enabled, the longest of the two possible lengths is used.
 
@@ -71,15 +71,15 @@ brr_encoder encodes a .wav file to a .brr native SNES sound sample.
 	brr_encoder [options] infile.wav outfile.brr
 
 	Options:
-	-a[ampl] adjust wave amplitude by a factor ampl (default : 1.0)
-	-l(pos) enable looping flag in the encoded BRR sample (default: disabled)
+	-a [ampl] adjust wave amplitude by a factor ampl (default : 1.0)
+	-l [pos] enable looping flag in the encoded BRR sample (default: disabled)
 		If a number follows the -l flag, this is the input's loop point in samples.
-	-f[0123] manually enable filters for BRR blocks (default: all enabled)
-	-r[type][ratio] resample input stream, followed by resample ratio (0.0 to 4.0)
+	-f [0123] manually enable filters for BRR blocks (default: all enabled)
+	-r [type][ratio] resample input stream, followed by resample ratio (0.0 to 4.0)
 		Lower means more samples at output, better quality but increased size.
 		Higher means less smaples, worse quality but decreased size.
-	-s[type][rate] automatically resample to get the specified samplerate (takes priority over -r)
-	-t[N] truncate the input wave to the the first N samples (ignoring any sound data that follows)
+	-s [type][rate] automatically resample to get the specified samplerate (takes priority over -r)
+	-t [N] truncate the input wave to the the first N samples (ignoring any sound data that follows)
 	-w disable wrapping (encoded sample will be compatible with old SPC players)
 	-g enable treble boost to compensate the gaussian filtering of SNES hardware
 	-m Add a 2 byte header to the output sample identifying the loop point. Required to use for AddmusicM/AddmusicK.
@@ -92,8 +92,8 @@ brr_encoder encodes a .wav file to a .brr native SNES sound sample.
 	b : bandlimited (best quality)
 
 	Examples:
-	brr_encoder -l432 -a0.8 -f01 -sc32000 in_sample.wav out_sample.brr
-	brr_encoder -m -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr
+	brr_encoder -l 432 -a 0.8 -f 01 -s c32000 in_sample.wav out_sample.brr
+	brr_encoder -m -l -f 23 -r b0.84 -t 19 in_sample.wav out_sample.brr
 
 Only .wav files of 8-bit PCM unsigned or 16-bit PCM signed are accepted. For any other sound format, use another program to convert your files to an accepted format, or even better modify the source so your format is supported.
 

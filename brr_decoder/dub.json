@@ -1,0 +1,10 @@
+{
+	"name": "brr_decoder",
+	"authors": [],
+	"description": "Tool for decoding BRR samples from WAV files.",
+	"copyright": "",
+	"license": "proprietary",
+	"dependencies":  {
+		"brrtools": "*"
+	}
+}

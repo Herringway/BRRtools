@@ -1,0 +1,12 @@
+{
+	"name": "brrtools",
+	"authors": [],
+	"description": "Tool for converting BRR samples.",
+	"copyright": "",
+	"license": "proprietary",
+	"subPackages": [
+		"brr_decoder",
+		"brr_encoder",
+		"spc_decoder"
+	]
+}

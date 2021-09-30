@@ -1,0 +1,10 @@
+{
+	"name": "brr_encoder",
+	"authors": [],
+	"description": "Tool for encoding BRR samples.",
+	"copyright": "",
+	"license": "proprietary",
+	"dependencies":  {
+		"brrtools": "*"
+	}
+}
